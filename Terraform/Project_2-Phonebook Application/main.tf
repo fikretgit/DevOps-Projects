@@ -22,7 +22,7 @@ resource "aws_launch_template" "asg-lt" {
   name = "phonebook-lt"
   image_id = data.aws_ami.instance.id
   instance_type = "t2.micro"
-  key_name = "felix"
+  key_name = "xxxxxx" # write your keyname
   vpc_security_group_ids = [aws_security_group.server-sg.id]
   user_data = filebase64("user-data.sh")
   depends_on = [github_repository_file.dbendpoint]
@@ -94,8 +94,8 @@ resource "aws_db_instance" "db-server" {
   db_name = "phonebook"
   engine = "mysql"
   engine_version = "8.0.28"
-  username = "admin"
-  password = "Oliver_1"
+  username = "xxxxxx"  # type your username
+  password = "xxxxxxx"  # type your password
   monitoring_interval = 0
   multi_az = false
   port = 3306
@@ -108,5 +108,5 @@ resource "github_repository_file" "dbendpoint" {
   file       = "dbserver.endpoint"
   repository = "phonebook"
   overwrite_on_create = true
-  branch = "main"
+  branch = "main"  # you change if your branch name "master"
 }
