@@ -3311,7 +3311,7 @@ git checkout feature/msp-23
 
 * Explain [Rancher Container Management Tool](https://rancher.com/docs/rancher/v2.x/en/overview/architecture/).
 
-* Create an IAM Policy with name of `call-rke-controlplane-policy.json` and also save it under `infrastructure` for `Control Plane` node to enable Rancher to create or remove EC2 resources.
+* Create an IAM Policy with name of `felix-rke-controlplane-policy.json` and also save it under `infrastructure` for `Control Plane` node to enable Rancher to create or remove EC2 resources.
 
 ``` json
 {
@@ -3383,7 +3383,7 @@ git checkout feature/msp-23
 }
 ```
 
-* Create an IAM Policy with name of `call-rke-etcd-worker-policy.json` and also save it under `infrastructure` for `etcd` or `worker` nodes to enable Rancher to get information from EC2 resources.
+* Create an IAM Policy with name of `felix-rke-etcd-worker-policy.json` and also save it under `infrastructure` for `etcd` or `worker` nodes to enable Rancher to get information from EC2 resources.
 
 ```json
 {
@@ -3408,11 +3408,11 @@ git checkout feature/msp-23
 }
 ```
 
-* Create an IAM Role with name of `call-rke-role` to attach RKE nodes (instances) using `call-rke-controlplane-policy` and `call-rke-etcd-worker-policy`.
+* Create an IAM Role with name of `felix-rke-role` to attach RKE nodes (instances) using `felix-rke-controlplane-policy` and `felix-rke-etcd-worker-policy`.
 
-* Create a security group for External Application Load Balancer of Rancher with name of `call-rke-alb-sg` and allow HTTP (Port 80) and HTTPS (Port 443) connections from anywhere.
+* Create a security group for External Application Load Balancer of Rancher with name of `felix-rke-alb-sg` and allow HTTP (Port 80) and HTTPS (Port 443) connections from anywhere.
   
-* Create a security group for RKE Kubernetes Cluster with name of `call-rke-cluster-sg` and define following inbound and outbound rules.
+* Create a security group for RKE Kubernetes Cluster with name of `felix-rke-cluster-sg` and define following inbound and outbound rules.
 
   * Inbound rules;
 
@@ -3434,18 +3434,18 @@ git checkout feature/msp-23
 
     * Allow TCP on port 2376 to any node IP from a node created using Node Driver for Docker machine TLS port.
 
-  * Allow all protocol on all port from `call-rke-cluster-sg` for self communication between Rancher `controlplane`, `etcd`, `worker` nodes.
+  * Allow all protocol on all port from `felix-rke-cluster-sg` for self communication between Rancher `controlplane`, `etcd`, `worker` nodes.
 
-* Log into Jenkins Server and create `call-rancher.pem` key-pair for Rancher Server using AWS CLI
+* Log into Jenkins Server and create `felix-rancher.pem` key-pair for Rancher Server using AWS CLI
   
 ```bash
-aws ec2 create-key-pair --region us-east-1 --key-name call-rancher.pem --query KeyMaterial --output text > ~/.ssh/call-rancher.pem
-chmod 400 ~/.ssh/call-rancher.pem
+aws ec2 create-key-pair --region us-east-1 --key-name felix-rancher.pem --query KeyMaterial --output text > ~/.ssh/felix-rancher.pem
+chmod 400 ~/.ssh/felix-rancher.pem
 ```
 
-* Launch an EC2 instance using `Ubuntu Server 20.04 LTS (HVM) (64-bit x86)` with `t2.medium` type, 16 GB root volume,  `call-rke-cluster-sg` security group, `call-rke-role` IAM Role, `Name:Call-Rancher-Cluster-Instance` tag and `call-rancher.pem` key-pair. Take note of `subnet id` of EC2. 
+* Launch an EC2 instance using `Ubuntu Server 20.04 LTS (HVM) (64-bit x86)` with `t2.medium` type, 16 GB root volume,  `felix-rke-cluster-sg` security group, `felix-rke-role` IAM Role, `Name:felix-Rancher-Cluster-Instance` tag and `felix-rancher.pem` key-pair. Take note of `subnet id` of EC2. 
 
-* Attach a tag to the `nodes (intances)`, `subnets` and `security group` for Rancher with `Key = kubernetes.io/cluster/Call-Rancher` and `Value = owned`.
+* Attach a tag to the `nodes (intances)`, `subnets` and `security group` for Rancher with `Key = kubernetes.io/cluster/felix-Rancher` and `Value = owned`.
   
 * Install `kubectl` on Jenkins Server. [Install and Set up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl)
 
@@ -3456,7 +3456,7 @@ chmod +x /usr/local/bin/kubectl
 kubectl version --short --client
 ```  
   
-* Log into `Call-Rancher-Cluster-Instance` from Jenkins Server (Bastion host) and install Docker using the following script.
+* Log into `felix-Rancher-Cluster-Instance` from Jenkins Server (Bastion host) and install Docker using the following script.
 
 ```bash
 # Set hostname of instance
@@ -3491,7 +3491,7 @@ sudo usermod -aG docker ubuntu
 newgrp docker
 ```
 
-* Create a target groups with name of `call-rancher-http-80-tg` with following setup and add the `rancher instances` to it.
+* Create a target groups with name of `felix-rancher-http-80-tg` with following setup and add the `rancher instances` to it.
 
 ```bash
 Target type         : instance
@@ -3509,7 +3509,7 @@ Interval            : 10 seoconds
 Success             : 200
 ```
 
-* Create Application Load Balancer with name of `call-rancher-alb` using `call-rke-alb-sg` security group with following settings and add `call-rancher-http-80-tg` target group to it.
+* Create Application Load Balancer with name of `felix-rancher-alb` using `felix-rke-alb-sg` security group with following settings and add `felix-rancher-http-80-tg` target group to it.
 
 ```text
 Scheme              : internet-facing
@@ -3519,12 +3519,12 @@ IP address type     : ipv4
 Protocol            : HTTPS/HTTP
 Port                : 443/80
 Availability Zones  : Select AZs of RKE instances
-Target group        : `call-rancher-http-80-tg` target group 
+Target group        : `felix-rancher-http-80-tg` target group 
 ```
 
 * Configure ALB Listener of HTTP on `Port 80` to redirect traffic to HTTPS on `Port 443`.
 
-* Create DNS A record for `rancher.clarusway.us` and attach the `call-rancher-alb` application load balancer to it.
+* Create DNS A record for `rancher.clarusway.us` and attach the `felix-rancher-alb` application load balancer to it.
 
 * Install RKE, the Rancher Kubernetes Engine, [Kubernetes distribution and command-line tool](https://rancher.com/docs/rke/latest/en/installation/)) on Jenkins Server.
 
@@ -3555,7 +3555,7 @@ services:
     creation: 6h
     retention: 24h
 
-ssh_key_path: ~/.ssh/call-rancher.pem
+ssh_key_path: ~/.ssh/felix-rancher.pem
 
 # Required for external TLS termination with
 # ingress-nginx v0.22+
