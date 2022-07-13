@@ -85,7 +85,8 @@ yum install java-11-amazon-corretto -y
 * Connect to your Development Server via `ssh` and clone the petclinic app from the repository [Spring Petclinic Microservices App](https://github.com/clarusway/petclinic-microservices-with-db.git).
 
 ``` bash
-git clone https://github.com/clarusway/petclinic-microservices-with-db.git
+git clone https://github.com/fikretgit/petclinic-pre-repo.git # or you can use; git clone https://github.com/clarusway/petclinic-microservices-with-db.git
+
 ```
 
 * Change your working directory to **petclinic-microservices** and delete the **.git** directory.
