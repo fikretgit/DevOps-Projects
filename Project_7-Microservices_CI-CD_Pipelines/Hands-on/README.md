@@ -622,11 +622,11 @@ public class PetTest {
         //Arrange
         Pet pet = new Pet();
         Owner owner = new Owner();
-        owner.setFirstName("Call");
+        owner.setFirstName("felix");
         //Act
         pet.setOwner(owner);
         //Assert
-        assertEquals("Call", pet.getOwner().getFirstName());
+        assertEquals("felix", pet.getOwner().getFirstName());
     }
     @Test
     public void testBirthDate(){
@@ -993,7 +993,7 @@ mkdir jenkins
     echo 'Running Unit Tests on Petclinic Application'
     docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/app -w /app maven:3.8-openjdk-11 mvn clean test
     ```
-  * Click `Add post-build action` under `Post-build Actions` and select `Record jacoco coverage report`
+  * Click `Add post-build action` under `Post-build Actions` and select `Record jacoco coverage report` <!-- and Line %40 - %10 , Classes %70 - % 50 arranged for this time.. Inclusions can be arranged .java*, because we have only one type file such as .java --> 
   * Click `Save`
   
 * Jenkins `CI Job` should be triggered to run on each commit of `feature**` and `bugfix**` branches and on each `PR` merge to `dev` branch.
@@ -1041,7 +1041,7 @@ git checkout feature/msp-14
 
 ``` bash
 PATH="$PATH:/usr/local/bin"
-APP_REPO_NAME="clarusway-repo/petclinic-app-dev"
+APP_REPO_NAME="felix-repo/petclinic-app-dev"
 AWS_REGION="us-east-1"
 
 aws ecr create-repository \
@@ -1617,10 +1617,10 @@ resource "aws_security_group" "matt-kube-master-sg" {
 
 resource "aws_instance" "kube-master" {
     ami = "ami-013f17f36f8b1fefb"
-    instance_type = "t2.medium"
+    instance_type = "t3a.medium"
     iam_instance_profile = module.iam.master_profile_name
     vpc_security_group_ids = [aws_security_group.matt-kube-master-sg.id, aws_security_group.matt-kube-mutual-sg.id]
-    key_name = "mattkey"
+    key_name = "felixkey"  // felixkey name must be written because Jenkins takes like this format..!!
     subnet_id = "subnet-c41ba589"  # select own subnet_id of us-east-1a
     availability_zone = "us-east-1a"
     tags = {
@@ -1635,10 +1635,10 @@ resource "aws_instance" "kube-master" {
 
 resource "aws_instance" "worker-1" {
     ami = "ami-013f17f36f8b1fefb"
-    instance_type = "t2.medium"
+    instance_type = "t3a.medium"
         iam_instance_profile = module.iam.worker_profile_name
     vpc_security_group_ids = [aws_security_group.matt-kube-worker-sg.id, aws_security_group.matt-kube-mutual-sg.id]
-    key_name = "mattkey"
+    key_name = "felixkey"  // felixkey name must be written because Jenkins takes like this format..!!
     subnet_id = "subnet-c41ba589"  # select own subnet_id of us-east-1a
     availability_zone = "us-east-1a"
     tags = {
@@ -1653,10 +1653,10 @@ resource "aws_instance" "worker-1" {
 
 resource "aws_instance" "worker-2" {
     ami = "ami-013f17f36f8b1fefb"
-    instance_type = "t2.medium"
+    instance_type = "t3a.medium"
     iam_instance_profile = module.iam.worker_profile_name
     vpc_security_group_ids = [aws_security_group.matt-kube-worker-sg.id, aws_security_group.matt-kube-mutual-sg.id]
-    key_name = "mattkey"
+    key_name = "felixkey"   // felixkey name must be written because Jenkins takes like this format..!!
     subnet_id = "subnet-c41ba589"  # select own subnet_id of us-east-1a
     availability_zone = "us-east-1a"
     tags = {
@@ -1736,7 +1736,7 @@ terraform --version
 
 ```bash
 PATH="$PATH:/usr/local/bin"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 AWS_REGION="us-east-1"
 aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${ANS_KEYPAIR} --query "KeyMaterial" --output text > ${ANS_KEYPAIR}
 chmod 400 ${ANS_KEYPAIR}
@@ -1746,10 +1746,10 @@ chmod 400 ${ANS_KEYPAIR}
 
 ```bash
 PATH="$PATH:/usr/local/bin"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 AWS_REGION="us-east-1"
 cd infrastructure/dev-k8s-terraform
-sed -i "s/mattkey/$ANS_KEYPAIR/g" main.tf
+sed -i "s/felixkey/$ANS_KEYPAIR/g" main.tf
 terraform init
 terraform apply -auto-approve -no-color
 ```
@@ -1757,16 +1757,16 @@ terraform apply -auto-approve -no-color
 - After running the job above, replace the script with the one below in order to test SSH connection with one of the instances.
 
 ```bash
-ANS_KEYPAIR="call-ansible-test-dev.key"
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${WORKSPACE}/${ANS_KEYPAIR} ubuntu@172.31.91.243 hostname
+ANS_KEYPAIR="felix-ansible-test-dev.key"
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${WORKSPACE}/${ANS_KEYPAIR} ubuntu@172.31.91.243 hostname  # master or worker1&2 Private IP can be added
 ```
 
 - Prepare static inventory file with name of `hosts.ini` for Ansible under `ansible/inventory` folder using Docker machines private IP addresses.
 
 ```ini
-172.31.91.243   ansible_user=ubuntu  
-172.31.87.143   ansible_user=ubuntu
-172.31.90.30    ansible_user=ubuntu
+172.31.91.243   ansible_user=ubuntu   # master Private IP
+172.31.87.143   ansible_user=ubuntu   # worker-1 Private IP
+172.31.90.30    ansible_user=ubuntu   # worker-2 Private IP
 ```
 
 - Commit the change, then push to the remote repo.
@@ -1781,7 +1781,7 @@ git push --set-upstream origin feature/msp-16
 
 ```bash
 PATH="$PATH:/usr/local/bin"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 export ANSIBLE_INVENTORY="${WORKSPACE}/ansible/inventory/hosts.ini"
 export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
 export ANSIBLE_HOST_KEY_CHECKING=False
@@ -1821,7 +1821,7 @@ git push
 
 ```bash
 APP_NAME="Petclinic"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 PATH="$PATH:/usr/local/bin"
 export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
 export ANSIBLE_HOST_KEY_CHECKING=False
@@ -1833,7 +1833,7 @@ ansible-inventory -v -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.
 ```bash
 # Test dev dynamic inventory by pinging
 APP_NAME="Petclinic"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 PATH="$PATH:/usr/local/bin"
 export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
 export ANSIBLE_HOST_KEY_CHECKING=False
@@ -2076,7 +2076,7 @@ git push
 
 ```bash
 APP_NAME="Petclinic"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 PATH="$PATH:/usr/local/bin"
 export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
 export ANSIBLE_HOST_KEY_CHECKING=False
@@ -2095,7 +2095,7 @@ terraform destroy -auto-approve -no-color
 
 ```bash
 PATH="$PATH:/usr/local/bin"
-ANS_KEYPAIR="call-ansible-test-dev.key"
+ANS_KEYPAIR="felix-ansible-test-dev.key"
 AWS_REGION="us-east-1"
 aws ec2 delete-key-pair --region ${AWS_REGION} --key-name ${ANS_KEYPAIR}
 rm -rf ${ANS_KEYPAIR}
@@ -2107,7 +2107,7 @@ rm -rf ${ANS_KEYPAIR}
 # Environment variables
 PATH="$PATH:/usr/local/bin"
 APP_NAME="Petclinic"
-ANS_KEYPAIR="Call-$APP_NAME-dev-${BUILD_NUMBER}.key"
+ANS_KEYPAIR="felix-$APP_NAME-dev-${BUILD_NUMBER}.key"
 AWS_REGION="us-east-1"
 export ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
 export ANSIBLE_HOST_KEY_CHECKING=False
@@ -2697,7 +2697,7 @@ pipeline {
         AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
         AWS_REGION="us-east-1"
         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        ANS_KEYPAIR="call-${APP_NAME}-dev-${BUILD_NUMBER}.key"
+        ANS_KEYPAIR="felix-${APP_NAME}-dev-${BUILD_NUMBER}.key"
         ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
         ANSIBLE_HOST_KEY_CHECKING="False"
     }
@@ -2771,7 +2771,7 @@ pipeline {
                 echo 'Creating QA Automation Infrastructure for Dev Environment'
                 sh """
                     cd infrastructure/dev-k8s-terraform
-                    sed -i "s/mattkey/$ANS_KEYPAIR/g" main.tf
+                    sed -i "s/felix/$ANS_KEYPAIR/g" main.tf
                     terraform init
                     terraform apply -auto-approve -no-color
                 """
@@ -2958,7 +2958,7 @@ pipeline {
                 echo 'Creating QA Automation Infrastructure for QA Environment'
                 sh """
                     cd infrastructure/qa-k8s-terraform
-                    sed -i "s/mattkey/$ANS_KEYPAIR/g" main.tf
+                    sed -i "s/felix/$ANS_KEYPAIR/g" main.tf
                     terraform init
                     terraform apply -auto-approve -no-color
                 """
@@ -3641,9 +3641,9 @@ kubectl --kubeconfig $KUBECONFIG -n cattle-system exec $(kubectl --kubeconfig $K
   
 ## MSP 25 - Create Staging and Production Environment with Rancher
 
-* To provide access of Rancher to the cloud resources, create a `Cloud Credentials` for AWS on Rancher and name it as `Call-AWS-Training-Account`.
+* To provide access of Rancher to the cloud resources, create a `Cloud Credentials` for AWS on Rancher and name it as `felix-AWS-Training-Account`.
 
-* Create a `Node Template` on Rancher with following configuration for to be used while launching the EC2 instances and name it as `Call-AWS-RancherOs-Template`.
+* Create a `Node Template` on Rancher with following configuration for to be used while launching the EC2 instances and name it as `felix-AWS-RancherOs-Template`.
 
 ```text
 Region            : us-east-1
