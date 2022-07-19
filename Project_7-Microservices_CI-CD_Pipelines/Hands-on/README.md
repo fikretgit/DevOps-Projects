@@ -59,7 +59,6 @@ This project aims to create full CI/CD Pipeline for microservice based applicati
 | Production Deployment Setup | Set Domain Name and TLS for Production | MSP-29  | Set Domain Name and TLS for Production Pipeline with Route 53 | feature/msp-29|
 | Production Deployment Setup | Set Monitoring Tools | MSP-30  | Set Monitoring tools, Prometheus and Grafana | |
 
-
 ## MSP 1 - Prepare Development Server Manually on EC2 Instance
 
 * Prepare development server manually on Amazon Linux 2 (t3a.medium) for developers, enabled with `Docker`,  `Docker-Compose`,  `Java 11`,  `Git`.
@@ -86,7 +85,6 @@ yum install java-11-amazon-corretto -y
 
 ``` bash
 git clone https://github.com/fikretgit/petclinic-pre-repo.git # or you can use; git clone https://github.com/clarusway/petclinic-microservices-with-db.git
-
 ```
 
 * Change your working directory to **petclinic-microservices** and delete the **.git** directory.
@@ -2244,7 +2242,7 @@ services:
     - 3306:3306
 ```
 
-* Install [conversion tool](https://kompose.io/installation/) named `Kompose` on your Jenkins Server. [User Guide](https://kompose.io/user-guide/#user-guide)
+* Install [conversion tool](https://kompose.io/installation/) named **`Kompose`** on your Jenkins Server. [User Guide](https://kompose.io/user-guide/#user-guide)
 
 ```bash
 curl -L https://github.com/kubernetes/kompose/releases/download/v1.26.1/kompose-linux-amd64 -o kompose
@@ -2253,7 +2251,7 @@ sudo mv ./kompose /usr/local/bin/kompose
 kompose version
 ```
 
-* Install Helm [version 3+](https://github.com/helm/helm/releases) on Jenkins Server. [Introduction to Helm](https://helm.sh/docs/intro/). [Helm Installation](https://helm.sh/docs/intro/install/).
+* Install **Helm** [version 3+](https://github.com/helm/helm/releases) on Jenkins Server. [Introduction to Helm](https://helm.sh/docs/intro/). [Helm Installation](https://helm.sh/docs/intro/install/).
 
 ```bash
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
@@ -2267,7 +2265,7 @@ cd k8s
 helm create petclinic_chart
 ```
 
-* Remove all files under the petclinic_chart/templates folder.
+* Remove all files under the `petclinic_chart/templates` folder.
 
 ```bash
 rm -r petclinic_chart/templates/*
@@ -2279,7 +2277,7 @@ rm -r petclinic_chart/templates/*
 kompose convert -f docker-compose.yml -o petclinic_chart/templates
 ```
 
-* Update deployment files with `init-containers` to launch microservices in sequence. See [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
+* Update all **deployment** files` with `init-containers` to launch microservices in sequence. See [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
 
 ```yaml
 # for discovery server
@@ -2287,7 +2285,7 @@ kompose convert -f docker-compose.yml -o petclinic_chart/templates
       - name: init-config-server
         image: busybox
         command: ['sh', '-c', 'until nc -z config-server:8888; do echo waiting for config-server; sleep 2; done;']
-# for all other microservices except config-server, discovery-server and mysql-server
+# for all other microservices except `config-server`, `discovery-server` and `mysql-server`.
       initContainers:
       - name: init-discovery-server
         image: busybox
@@ -2331,7 +2329,7 @@ aws s3api create-bucket --bucket petclinic-helm-charts-<put-your-name> --region 
 aws s3api put-object --bucket petclinic-helm-charts-<put-your-name> --key stable/myapp/
 ```
 
-* Install the helm-s3 plugin for Amazon S3.
+* Install the **helm-s3 plugin** for Amazon S3.
 
 ```bash
 helm plugin install https://github.com/hypnoglow/helm-s3.git
@@ -2346,7 +2344,7 @@ helm version
 helm plugin install https://github.com/hypnoglow/helm-s3.git
 ``` 
 
-* Initialize the Amazon S3 Helm repository.
+* First `exit` to change user to `ec2-user`, initialize the Amazon S3 Helm repository.
 
 ```bash
 AWS_REGION=us-east-1 helm s3 init s3://petclinic-helm-charts-<put-your-name>/stable/myapp 
@@ -2384,7 +2382,7 @@ helm package petclinic_chart/
 * Store the local package in the Amazon S3 Helm repository.
 
 ```bash
-HELM_S3_MODE=3 AWS_REGION=us-east-1 helm s3 push ./petclinic_chart-1.1.1.tgz stable-petclinicapp # --force flag can be used to override to existing files
+HELM_S3_MODE=3 AWS_REGION=us-east-1 helm s3 push ./petclinic_chart-0.0.1.tgz stable-petclinicapp # HELM_S3_MODE=3 is used to override to existing files form documentation..!!
 ```
 
 * Search for the Helm chart.
@@ -2400,7 +2398,7 @@ NAME                                    CHART VERSION   APP VERSION     DESCRIPT
 stable-petclinicapp/petclinic_chart     0.0.1           0.1.0           A Helm chart for Kubernetes
 ```
 
-* In Chart.yaml, set the `version` value to `0.0.2` in Chart.yaml, and then package the chart, this time changing the version in Chart.yaml to 0.0.2. Version control is ideally achieved through automation by using tools like GitVersion or Jenkins build numbers in a CI/CD pipeline. 
+* `In Chart.yaml`, set the `version` value to `0.0.2` in Chart.yaml, and then package the chart, this time changing the version in Chart.yaml to 0.0.2. Version control is ideally achieved through automation by using tools like GitVersion or Jenkins build numbers in a CI/CD pipeline. 
 
 ```bash
 helm package petclinic_chart/
@@ -2409,7 +2407,7 @@ helm package petclinic_chart/
 * Push the new version to the Helm repository in Amazon S3.
 
 ```bash
-HELM_S3_MODE=3 AWS_REGION=us-east-1 helm s3 push ./petclinic_chart-1.1.2.tgz stable-petclinicapp  # --force flag can be used to override to existing files
+HELM_S3_MODE=3 AWS_REGION=us-east-1 helm s3 push ./petclinic_chart-0.0.2.tgz stable-petclinicapp  # HELM_S3_MODE=3 is used to override to existing files form documentation..!!
 ```
 
 * Verify the updated Helm chart.
@@ -2441,7 +2439,7 @@ stable-petclinicapp/petclinic_chart     0.0.2           0.1.0           A Helm c
 stable-petclinicapp/petclinic_chart     0.0.1           0.1.0           A Helm chart for Kubernetes
 ```
 
-* In Chart.yaml, set the `version` value to `HELM_VERSION` in Chart.yaml for automation in jenkins pipeline.
+* In `Chart.yaml`, set the `version` value to `HELM_VERSION` in Chart.yaml for automation in jenkins pipeline.
 
 * Commit the change, then push the script to the remote repo.
 
