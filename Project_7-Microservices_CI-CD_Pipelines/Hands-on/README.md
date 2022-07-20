@@ -2683,7 +2683,7 @@ PATH="$PATH:/usr/local/bin"
 ansible-playbook -vvv --connection=local --inventory 127.0.0.1, --extra-vars "workspace=${WORKSPACE} master_public_ip=${MASTER_PUBLIC_IP}" ./ansible/playbooks/pb_run_selenium_jobs.yaml
 ```
 
-- Prepare a Jenkinsfile for `petclinic-nightly` builds and save it as `jenkinsfile-petclinic-nightly` under `jenkins` folder.
+- Prepare a Jenkinsfile for `petclinic-nightly` builds and save it as `jenkinsfile-petclinic-nightly` under `jenkins` folder. This job will run and then after success code taken all resources(S3 Buckets, images, ECR repo..) and key will be deleted.. 
 
 ```groovy
 pipeline {
@@ -2691,7 +2691,7 @@ pipeline {
     environment {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         APP_NAME="petclinic"
-        APP_REPO_NAME="clarusway-repo/${APP_NAME}-app-dev"
+        APP_REPO_NAME="felix2-repo/${APP_NAME}-app-dev" // repo will be created and after running deleted, so name is not important
         AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
         AWS_REGION="us-east-1"
         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -2769,7 +2769,7 @@ pipeline {
                 echo 'Creating QA Automation Infrastructure for Dev Environment'
                 sh """
                     cd infrastructure/dev-k8s-terraform
-                    sed -i "s/felix/$ANS_KEYPAIR/g" main.tf
+                    sed -i "s/felixkey/$ANS_KEYPAIR/g" main.tf
                     terraform init
                     terraform apply -auto-approve -no-color
                 """
@@ -2855,7 +2855,7 @@ pipeline {
 }
 ```
 
-- Create a Jenkins pipeline with the name of `petclinic-nightly` with the following script to run QA automation tests and configure a `cron job` to trigger the pipeline every night at midnight (`0 0 * * *`) on the `dev` branch. Input `jenkins/jenkinsfile-petclinic-nightly` to the `Script Path` field. Petclinic nightly build pipeline should be built on a temporary QA automation environment.
+- Create a Jenkins `Pipeline Project` Job with the name of `petclinic-nightly` with the following script to run QA automation tests and configure a `cron job` to trigger the pipeline every night at midnight (`0 0 * * *`) on the `dev` branch. Input `jenkins/jenkinsfile-petclinic-nightly` to the `Script Path` field. Petclinic nightly build pipeline should be built on a temporary QA automation environment.
 
 - Commit the change, then push the script to the remote repo.
 
@@ -2890,12 +2890,12 @@ mkdir infrastructure/qa-k8s-terraform
 cp -r infrastructure/dev-k8s-terraform/* infrastructure/qa-k8s-terraform/
 ```
 
-- Create a Jenkins Job with the name of `create-permanent-key-pair-for-petclinic-qa-env` for Ansible key pair to be used in QA environment using following script, and save the script as `create-permanent-key-pair-for-qa-environment.sh` under `jenkins` folder.
+- Create a `FreeStyle Project` Jenkins Job with the name of `create-permanent-key-pair-for-petclinic-qa-env` for Ansible key pair to be used in QA environment using following script, and save the script as `create-permanent-key-pair-for-qa-environment.sh` under `jenkins` folder.
 
 ```bash
 PATH="$PATH:/usr/local/bin"
 APP_NAME="petclinic"
-ANS_KEYPAIR="matt-${APP_NAME}-qa.key"
+ANS_KEYPAIR="felix-${APP_NAME}-qa.key"
 AWS_REGION="us-east-1"
 aws ec2 create-key-pair --region ${AWS_REGION} --key-name ${ANS_KEYPAIR} --query "KeyMaterial" --output text > ${ANS_KEYPAIR}
 chmod 400 ${ANS_KEYPAIR}
@@ -2909,7 +2909,7 @@ ls -al ${JENKINS_HOME}/.ssh
 ```bash
 PATH="$PATH:/usr/local/bin"
 APP_NAME="petclinic"
-ANS_KEYPAIR="matt-${APP_NAME}-qa.key"
+ANS_KEYPAIR="felix-${APP_NAME}-qa.key"
 AWS_REGION="us-east-1"
 cd infrastructure/qa-k8s-terraform
 terraform init
@@ -2946,7 +2946,7 @@ pipeline {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         APP_NAME="petclinic"
         AWS_REGION="us-east-1"
-        ANS_KEYPAIR="matt-${APP_NAME}-qa.key"
+        ANS_KEYPAIR="felix-${APP_NAME}-qa.key"
         ANSIBLE_PRIVATE_KEY_FILE="${JENKINS_HOME}/.ssh/${ANS_KEYPAIR}"
         ANSIBLE_HOST_KEY_CHECKING="False"
     }
@@ -2956,7 +2956,7 @@ pipeline {
                 echo 'Creating QA Automation Infrastructure for QA Environment'
                 sh """
                     cd infrastructure/qa-k8s-terraform
-                    sed -i "s/felix/$ANS_KEYPAIR/g" main.tf
+                    sed -i "s/felixkey/$ANS_KEYPAIR/g" main.tf
                     terraform init
                     terraform apply -auto-approve -no-color
                 """
@@ -2997,7 +2997,7 @@ git checkout dev
 git merge feature/msp-19
 git push origin dev
 ```
-- Create a pipeline on Jenkins Server with name of `create-qa-environment-on-kubernetes-cluster` and create QA environment manually on `dev` branch.
+- Create a `Pipeline` Job on Jenkins Server with name of `create-qa-environment-on-kubernetes-cluster` and create QA environment manually on `dev` branch and jenkinsfile path must be: `jenkins/jenkinsfile-create-qa-environment-on-kubernetes-cluster` then click `apply`, `save` and `built`..
 
 ## MSP 20 - Prepare Build Scripts for QA Environment
 
