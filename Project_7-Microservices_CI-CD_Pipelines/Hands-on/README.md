@@ -3013,7 +3013,7 @@ git checkout feature/msp-20
 
 ```bash
 PATH="$PATH:/usr/local/bin"
-APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
+APP_REPO_NAME="felix-repo/petclinic-app-qa"
 AWS_REGION="us-east-1"
 
 aws ecr create-repository \
@@ -3145,13 +3145,13 @@ git branch feature/msp-21
 git checkout feature/msp-21
 ```
 
-- Create a Jenkins Job with name of `build-and-deploy-petclinic-on-qa-env` to build and deploy the app on `QA environment` manually on `release` branch using following script, and save the script as `build-and-deploy-petclinic-on-qa-env-manually.sh` under `jenkins` folder.
+- Create a `:Free Style` Jenkins Job with name of `build-and-deploy-petclinic-on-qa-env` to build and deploy the app on `QA environment` manually on `release` branch using following script, and save the script as `build-and-deploy-petclinic-on-qa-env-manually.sh` under `jenkins` folder.
 
 ```bash
 PATH="$PATH:/usr/local/bin"
 APP_NAME="petclinic"
-APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
-ANS_KEYPAIR="matt-${APP_NAME}-qa.key"
+APP_REPO_NAME="felix-repo/petclinic-app-qa"
+ANS_KEYPAIR="felix-${APP_NAME}-qa.key"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 export AWS_REGION="us-east-1"
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -3200,7 +3200,7 @@ git branch feature/msp-22
 git checkout feature/msp-22
 ```
 
-- Create a QA Pipeline on Jenkins with name of `petclinic-weekly-qa` with following script and configure a `cron job` to trigger the pipeline every Sundays at midnight (`59 23 * * 0`) on `release` branch. Petclinic weekly build pipeline should be built on permanent QA environment.
+- Create a QA `Pipeline` on Jenkins with name of `petclinic-weekly-qa` with following script and configure a `cron job` to trigger the pipeline every Sundays at midnight (`59 23 * * 0`) on `release` branch. Petclinic weekly build pipeline should be built on permanent QA environment.
 
 - Prepare a Jenkinsfile for `petclinic-weekly-qa` builds and save it as `jenkinsfile-petclinic-weekly-qa` under `jenkins` folder.
 
@@ -3210,8 +3210,8 @@ pipeline {
     environment {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         APP_NAME="petclinic"
-        APP_REPO_NAME="clarusway-repo/petclinic-app-qa"
-        ANS_KEYPAIR="matt-petclinic-qa.key"
+        APP_REPO_NAME="felix-repo/petclinic-app-qa"
+        ANS_KEYPAIR="felix-petclinic-qa.key"
         AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
         AWS_REGION="us-east-1"
         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
