@@ -3433,7 +3433,7 @@ git checkout feature/msp-23
 
     * Allow **TCP** on port 2376 to any node IP from a node created using Node Driver for Docker machine TLS port. 
 
-  * After `Save`, `Edit Outbound Rule` and add **All TCP** (0 - 65535) with `felix-rke-cluster-sg` in `destination part` in order to allow all protocol on all port from `felix-rke-cluster-sg` for self communication between Rancher `controlplane`, `etcd`, `worker` nodes.
+  * After `Save`, `Edit Outbound Rule` and add **All TCP** (0 - 65535) with `felix-rke-cluster-sg` in `destination part` in order to allow all protocol on all port from `felix-rke-cluster-sg` for self communication between Rancher `controlplane`, `etcd`, `worker` nodes. Open to **All Traffic** from Anywhere also..
 
 * Log into Jenkins Server and create `felix-rancher.pem` key-pair for Rancher Server using AWS CLI
   
@@ -3639,55 +3639,112 @@ export KUBECONFIG=~/.kube/config
 kubectl --kubeconfig $KUBECONFIG -n cattle-system exec $(kubectl --kubeconfig $KUBECONFIG -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
 ```
   
-## MSP 25 - Create Staging and Production Environment with Rancher
-
-* To provide access of Rancher to the cloud resources, create a `Cloud Credentials` for AWS on Rancher and name it as `felix-AWS-Training-Account`.
-
-* Create a `Node Template` on Rancher with following configuration for to be used while launching the EC2 instances and name it as `felix-AWS-RancherOs-Template`.
-
-```text
-Region            : us-east-1
-Security group    : create new sg (rancher-nodes)
-Instance Type     : t2.medium
-Root Disk Size    : 16 GB
-AMI (RancherOS)   : ami-0e8a3347e4c5959bd
-SSH User          : rancher
-Label             : os=rancheros
-```
-
-## MSP 26 - Prepare Nexus Server
+## MSP 25 - Prepare Nexus Server
 
 * Create `feature/msp-26` branch from `release`.
 
 ``` bash
 git checkout release
-git branch feature/msp-26
-git checkout feature/msp-26
+git branch feature/msp-25
+git checkout feature/msp-25
 ```
 
-* Set up a Nexus Server by using docker image.  To do so, prepare a [Terraform File for Nexus Server](./msp-26-nexus-server-terraform.yml) with following script and save it as `nexus-server-terraform.tf` under `infrastructure` folder. 
+* Set up a Nexus Server by using docker image.  To do so, prepare a [Terraform File for Nexus Server](./msp-25-nexus-server-terraform.yml) with following script and save it as `nexus-server-terraform.tf` under `infrastructure` folder. 
 
 * Note: Terraform will will launch an t3a.medium (Nexus needs 8 GB of RAM) EC2 instance using the Amazon Linux 2 AMI with security group allowing `SSH (22)` and `Nexus Port (8081)` connections.
 
 ``` bash
-#! /bin/bash
-# update os
-yum update -y
-# set server hostname as jenkins-server
-hostnamectl set-hostname nexus-server
-# install docker
-yum install docker -y
-# start docker
-systemctl start docker
-# enable docker service
-systemctl enable docker
-# add ec2-user to docker group
-sudo usermod -aG docker ec2-user
-newgrp docker
-# create a docker volume for nexus persistent data
-docker volume create --name nexus-data
-# run the nexus container
-docker run -d -p 8081:8081 --name nexus -v nexus-data:/nexus-data sonatype/nexus3
+//This Terraform Template creates a Nexus server on AWS EC2 Instance
+//Nexus server will run on Amazon Linux 2 with custom security group
+//allowing SSH (22) and TCP (8081) connections from anywhere.
+
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "tf-nexus-server" {
+  ami           = "ami-0cff7528ff583bf9a"
+  instance_type = "t3a.medium"
+  key_name      = "<your keypair name>.pem"
+  vpc_security_group_ids = [aws_security_group.tf-nexus-sec-gr.id]
+  tags = {
+    Name = "nexus-server"
+  }
+    ebs_block_device {
+        device_name = "/dev/xvda"
+        volume_type = "gp3"
+        volume_size = 16
+    }
+  user_data = <<-EOF
+  #! /bin/bash
+  yum update -y
+  yum install docker -y
+  systemctl start docker
+  systemctl enable docker
+  usermod -aG docker ec2-user
+  newgrp docker
+  docker volume create --name nexus-data
+  docker run -d -p 8081:8081 --name nexus -v nexus-data:/nexus-data sonatype/nexus3
+  EOF
+}
+
+
+resource "null_resource" "forpasswd" {
+  depends_on = [aws_instance.tf-nexus-server]
+
+  provisioner "local-exec" {
+    command = "aws ec2 wait instance-status-ok --instance-ids ${aws_instance.tf-nexus-server.id}"
+  }
+
+  # Do not forget to define your key file path correctly!
+  provisioner "local-exec" {
+    command = "ssh -i ~/.ssh/<your keypair name>.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ec2-user@${aws_instance.tf-nexus-server.public_ip} 'docker cp nexus:/nexus-data/admin.password  admin.password && cat /home/ec2-user/admin.password' > initialpasswd.txt"
+  }
+}
+
+
+
+resource "aws_security_group" "tf-nexus-sec-gr" {
+  name = "nexus-server-sec-gr-oliver"
+  tags = {
+    Name = "nexus-server-sec-gr"
+  }
+
+  ingress {
+    from_port   = 22
+    protocol    = "tcp"
+    to_port     = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 8081
+    protocol    = "tcp"
+    to_port     = 8081
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    protocol    = -1
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+output "nexus" {
+  value = "http://${aws_instance.tf-nexus-server.public_ip}:8081"
+}
 ```
 
 - Open your browser to load the repository manager: `http://<AWS public dns>:8081` and click `Sing in` upper right of the page. A box will pop up.
@@ -3703,7 +3760,7 @@ Write `admin` for Username and paste the string which you copied from admin.pass
 
 ### Configure the app for Nexus Operation
 
-- Nexus searchs for settings.xml in the `/home/ec2-user/.m2` directory. .m2 directory is created after running the first mvn command.
+- Nexus searchs for settings.xml in the `/home/ec2-user/.m2` directory. .m2 directory is created after running the first mvn command. (ie. `./mvnw clean` command)
 
 - Create the settings.xml file.
 ```bash
@@ -3789,7 +3846,7 @@ nano /home/ec2-user/.m2/settings.xml
 ./mvnw clean deploy
 ```
 
-- Note: if you want to redeploy the same artifact to release repository, you need to set Deployment policy : "Allow redeploy".
+- Note: if you want to **redeploy** the same artifact to release repository, you need to set **Deployment policy** : `Allow redeploy`.
 (nexus server --> server configuration --> repositories --> maven releases --> Deployment policy : ``Allow redeploy``)
 
 * Commit the change, then push the cloudformation file to the remote repo.
@@ -3797,10 +3854,26 @@ nano /home/ec2-user/.m2/settings.xml
 ``` bash
 git add .
 git commit -m 'added Nexus server terraform files'
-git push --set-upstream origin feature/msp-26
+git push --set-upstream origin feature/msp-25
 git checkout dev
-git merge feature/msp-26
+git merge feature/msp-25
 git push origin dev
+```
+
+## MSP 26 - Create Staging and Production Environment with Rancher
+
+* To provide access of Rancher to the cloud resources, create a `Cloud Credentials` for AWS on Rancher and name it as `Felix` by adding your **Access** and **Secret key** and arrange Region: `us-east-1`.
+
+* Create a `Node Template` on Rancher with following configuration for to be used while launching the EC2 instances and name it as `felix-AWS-RancherOs-Template`.
+
+```text
+Region            : us-east-1
+Security group    : create new sg (rancher-nodes)
+Instance Type     : t3a.medium
+Root Disk Size    : 16 GB
+AMI (RancherOS)   : ami-0e8a3347e4c5959bd
+SSH User          : rancher
+Label             : key = os value = ranchero
 ```
 
 ## MSP 27 - Prepare a Staging Pipeline
@@ -3915,7 +3988,7 @@ rancher --version
   * Define an id like `rancher-petclinic-credentials`.
 
 
-* Create a Staging Pipeline on Jenkins with name of `petclinic-staging` with following script and configure a `cron job` to trigger the pipeline every Sundays at midnight (`59 23 * * 0`) on `release` branch. `Petclinic staging pipeline` should be deployed on permanent staging-environment on `petclinic-cluster` Kubernetes cluster under `petclinic-staging-ns` namespace.
+* Create a Staging `Pipeline` on Jenkins with name of `petclinic-staging` with following script and configure a `cron job` to trigger the pipeline every Sundays at midnight (`59 23 * * 0`) on `release` branch. `Petclinic staging pipeline` should be deployed on permanent staging-environment on `petclinic-cluster` Kubernetes cluster under `petclinic-staging-ns` namespace.
 
 * Prepare a Jenkinsfile for `petclinic-staging` pipeline and save it as `jenkinsfile-petclinic-staging` under `jenkins` folder.
 
@@ -3925,11 +3998,11 @@ pipeline {
     environment {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         APP_NAME="petclinic"
-        APP_REPO_NAME="clarusway-repo/petclinic-app-staging"
+        APP_REPO_NAME="felix-repo/petclinic-app-staging"
         AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
         AWS_REGION="us-east-1"
         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        RANCHER_URL="https://rancher.clarusway.us"
+        RANCHER_URL="https://rancher.fikretopaloglu.com"
         // Get the project-id from Rancher UI (projects/namespaces --> petclinic-cluster-staging namespace --> Edit yaml --> copy projectId )
         RANCHER_CONTEXT="petclinic-cluster:project-id" 
        //First part of projectID
@@ -3996,7 +4069,7 @@ pipeline {
                 sh "rm -f k8s/config"
                 sh "rancher cluster kf $CLUSTERID > k8s/config"
                 sh "chmod 400 k8s/config"
-                sh "helm repo add stable-petclinic s3://petclinic-helm-charts/stable/myapp/"
+                sh "helm repo add stable-petclinic s3://felix-petclinic-helm-charts/stable/myapp/"
                 sh "helm package k8s/petclinic_chart"
                 sh "helm s3 push --force petclinic_chart-${BUILD_NUMBER}.tgz stable-petclinic"  // --force flag is used to override to existing files
                 sh "helm repo update"
