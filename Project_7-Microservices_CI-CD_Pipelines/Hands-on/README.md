@@ -3523,7 +3523,7 @@ Target group        : `felix-rancher-http-80-tg` target group
 
 * Configure ALB Listener of HTTP on `Port 80` to **redirect** traffic to HTTPS on `Port 443`.
 
-* Create DNS A record for `rancher.clarusway.us` and attach the `felix-rancher-alb` application load balancer to it.
+* Create DNS A record for `rancher.fikretopaloglu.com` and attach the `felix-rancher-alb` application load balancer to it.
 
 * Install RKE, the Rancher Kubernetes Engine, [Kubernetes distribution and command-line tool](https://rancher.com/docs/rke/latest/en/installation/)) on Jenkins Server.
 
@@ -4086,7 +4086,7 @@ pipeline {
 }
 ```
 
-* Create an `A` record of `staging-petclinic.clarusway.us` in your hosted zone (in our case `clarusway.us`) using AWS Route 53 domain registrar and bind it to your `petclinic cluster`.
+* Create an `A` record of `staging-petclinic.fikretopaloglu.com` in your hosted zone (in our case `fikretopaloglu.com`) using AWS Route 53 domain registrar and bind it to your `petclinic cluster`.
 
 * Commit the change, then push the script to the remote repo.
 
@@ -4120,13 +4120,20 @@ Control Plane     : checked
 Worker            : checked
 ```
 
+* Before creating namespace in `petclinic-cluster`, we must copy `config` file by using `Rancher Console` and take from **config** file inside of petclinic-cluster from up to right `on dashboard`. we **must change config file** because we created a new cluster named `petclinic-cluster`and in order to run any command on this cluster, **old config must be changed**, as old config was created for Jenkins..
+
 * Create `petclinic-prod-ns` namespace on `petclinic-cluster` with Rancher.
+
+``` bash
+kubectl create ns petclinic-prod-ns
+```
+!! we can create any namespaces by **using Rancher Console** as well..
 
 * Create a Jenkins Job and name it as `create-ecr-docker-registry-for-petclinic-prod` to create Docker Registry for `Production` manually on AWS ECR.
 
 ``` bash
 PATH="$PATH:/usr/local/bin"
-APP_REPO_NAME="clarusway-repo/petclinic-app-prod"
+APP_REPO_NAME="felix-repo/petclinic-app-prod"
 AWS_REGION="us-east-1"
 
 aws ecr create-repository \
@@ -4203,7 +4210,7 @@ docker push "${IMAGE_TAG_PROMETHEUS_SERVICE}"
   - Initial database name: petclinic
 ```
 
-- Delete `mysql-server-deployment.yaml` file from `k8s/petclinic_chart/templates` folder.
+- **Delete** `mysql-server-deployment.yaml` file from `k8s/petclinic_chart/templates` folder.
 
 - Update `k8s/petclinic_chart/templates/mysql-server-service.yaml` as below.
 
@@ -4232,11 +4239,11 @@ pipeline {
     environment {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         APP_NAME="petclinic"
-        APP_REPO_NAME="clarusway-repo/petclinic-app-prod"
+        APP_REPO_NAME="felix-repo/petclinic-app-prod"
         AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
         AWS_REGION="us-east-1"
         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        RANCHER_URL="https://rancher.clarusway.us"
+        RANCHER_URL="https://rancher.fikretopaloglu.com"
         // Get the project-id from Rancher UI (petclinic-cluster-staging namespace, View in API, copy projectId )
         RANCHER_CONTEXT="petclinic-cluster:project-id" 
        //First part of projectID
@@ -4303,7 +4310,7 @@ pipeline {
                 sh "rm -f k8s/config"
                 sh "rancher cluster kf $CLUSTERID > k8s/config"
                 sh "chmod 400 k8s/config"
-                sh "helm repo add stable-petclinic s3://petclinic-helm-charts/stable/myapp/"
+                sh "helm repo add stable-petclinic s3://felix-petclinic-helm-charts/stable/myapp/"
                 sh "helm package k8s/petclinic_chart"
                 sh "helm s3 push --force petclinic_chart-${BUILD_NUMBER}.tgz stable-petclinic"  // --force command is used to override existing files 
                 sh "helm repo update"
@@ -4349,10 +4356,11 @@ git branch feature/msp-29
 git checkout feature/msp-29
 ```
 
-* Create an `A` record of `petclinic.clarusway.us` in your hosted zone (in our case `clarusway.us`) using AWS Route 53 domain registrar and bind it to your `petclinic cluster`.
+* Create an `A` record of `petclinic.fikretopaloglu.com` in your hosted zone (in our case `fikretopaloglu.com`) using AWS Route 53 domain registrar and bind it to your `petclinic cluster`.
 
-* Configure TLS(SSL) certificate for `petclinic.clarusway.us` using `cert-manager` on petclinic K8s cluster with the following steps.
+* Configure TLS(SSL) certificate for `petclinic.fikretopaloglu.com` using `cert-manager` on petclinic K8s cluster with the following steps.
 
+* !!..  If you have changed the **config** file under `.kube` folder, the next step below (4366 - 4374)  can be eligible.. Because we are now able to reach Rancher and use the RKE command by copied config.
 * Log into Jenkins Server and configure the `kubectl` to connect to petclinic cluster by getting the `Kubeconfig` file from Rancher and save it as `$HOME/.kube/config` or set `KUBECONFIG` environment variable.
 
 ```bash
@@ -4447,11 +4455,11 @@ metadata:
 spec:
   tls:
   - hosts:
-    - petclinic.clarusway.us
+    - petclinic.fikretopaloglu.com
     secretName: petclinic-tls
 ```
 
-* Check and verify that the TLS(SSL) certificate created and successfully issued to `petclinic.clarusway.us` by checking URL of `https://petclinic.clarusway.us`
+* Check and verify that the TLS(SSL) certificate created and successfully issued to `petclinic.fikretopaloglu.com` by checking URL of `https://petclinic.fikretopaloglu.com`
 
 * Commit the change, then push the tls script to the remote repo.
 
